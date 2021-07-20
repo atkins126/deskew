@@ -1,3 +1,13 @@
+{
+  Deskew
+  by Marek Mauder
+  https://galfar.vevb.net/deskew
+  https://github.com/galfar/deskew
+  - - - - -
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+}
 unit AboutForm;
 
 interface
@@ -17,8 +27,10 @@ type
     LabWeb: TLabel;
     LabTitle: TLabel;
     LabVersion: TLabel;
+    LabGh: TLabel;
     procedure BtnCloseClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure LabGhClick(Sender: TObject);
     procedure LabWebClick(Sender: TObject);
   end;
 
@@ -43,6 +55,8 @@ procedure TFormAbout.FormCreate(Sender: TObject);
 var
   Icon: TIcon;
 begin
+  {$IFDEF MSWINDOWS}Color := clWhite;{$ENDIF}
+
   LabTitle.Caption := Application.Title;
   LabVersion.Caption := 'v' + Module.VersionString;
   LabWeb.Caption := Config.WebLink;
@@ -65,6 +79,11 @@ begin
     ImageIcon.Stretch := False;
     ImageIcon.Picture.LoadFromResourceName(HInstance, Config.LogoImageResName);
   end;
+end;
+
+procedure TFormAbout.LabGhClick(Sender: TObject);
+begin
+  OpenURL(LabGh.Caption);
 end;
 
 procedure TFormAbout.LabWebClick(Sender: TObject);

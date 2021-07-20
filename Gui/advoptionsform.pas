@@ -1,10 +1,20 @@
+{
+  Deskew
+  by Marek Mauder
+  https://galfar.vevb.net/deskew
+  https://github.com/galfar/deskew
+  - - - - -
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+}
 unit AdvOptionsForm;
 
 interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, Spin, ActnList, Options, Config;
+  ExtCtrls, Spin, ActnList, Buttons, Options, Config;
 
 type
 
@@ -14,10 +24,9 @@ type
     ActResetOptions: TAction;
     ActBrowseDeskewExe: TAction;
     ActionList: TActionList;
-    Bevel1: TBevel;
-    Bevel2: TBevel;
     BtnBrowseDeskewExePath: TButton;
-    BtnResetOptions: TButton;
+    BtnOk: TBitBtn;
+    BtnResetOptions: TBitBtn;
     CheckPrintParams: TCheckBox;
     CheckThresholdAuto: TCheckBox;
     CheckJpegQuality: TCheckBox;
@@ -38,18 +47,22 @@ type
     LabMaxAngle: TLabel;
     LabSkipAngle: TLabel;
     Panel1: TPanel;
+    Shape1: TShape;
+    Shape2: TShape;
     SpinThresholdValue: TSpinEdit;
     SpinEditJpegQuality: TSpinEdit;
     SpinEditMaxAngle: TFloatSpinEdit;
     SpinEditSkipAngle: TFloatSpinEdit;
     procedure ActResetOptionsExecute(Sender: TObject);
     procedure ActBrowseDeskewExeExecute(Sender: TObject);
+    procedure BtnOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   public
+    procedure DoIdle;
+  private
     procedure ApplyOptions(AOptions: TOptions);
     procedure GatherOptions(AOptions: TOptions);
-    procedure DoIdle;
   end;
 
 var
@@ -66,6 +79,8 @@ uses
 
 procedure TFormAdvOptions.FormCreate(Sender: TObject);
 begin
+  {$IFDEF MSWINDOWS}Color := clWhite;{$ENDIF}
+
   ComboOutputFormat.Clear;
   ComboOutputFormat.AddItem('Default (usually same as input)', TObject(fofNone));
   ComboOutputFormat.AddItem('1bit black and white', TObject(fofBinary1));
@@ -98,13 +113,11 @@ begin
     BtnBrowseDeskewExePath.Visible := False;
     Height := EdDeskewExePath.BoundsRect.Bottom;
   end;
-
-  ApplyOptions(Module.Options);
 end;
 
-procedure TFormAdvOptions.FormDestroy(Sender: TObject);
+procedure TFormAdvOptions.FormShow(Sender: TObject);
 begin
-  GatherOptions(Module.Options);
+  ApplyOptions(Module.Options);
 end;
 
 procedure TFormAdvOptions.ApplyOptions(AOptions: TOptions);
@@ -165,6 +178,12 @@ begin
     EdDeskewExePath.Text := Module.OpenDialogSingle.FileName;
     EdDeskewExePath.SelStart := Length(EdDeskewExePath.Text);
   end;
+end;
+
+procedure TFormAdvOptions.BtnOkClick(Sender: TObject);
+begin
+  GatherOptions(Module.Options);
+  Close;
 end;
 
 procedure TFormAdvOptions.ActResetOptionsExecute(Sender: TObject);

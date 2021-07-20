@@ -1,3 +1,13 @@
+{
+  Deskew
+  by Marek Mauder
+  https://galfar.vevb.net/deskew
+  https://github.com/galfar/deskew
+  - - - - -
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+}
 unit MainForm;
 
 interface
@@ -5,7 +15,7 @@ interface
 uses
   Classes, SysUtils, FileUtil, Forms,
   Controls, Graphics, Dialogs, ExtCtrls, StdCtrls,
-  ComCtrls, ActnList,
+  ComCtrls, ActnList, Buttons,
   // App units
   Runner, Options;
 
@@ -23,13 +33,14 @@ type
     ActShowAdvOptions: TAction;
     ActionList: TActionList;
     ApplicationProperties: TApplicationProperties;
-    BtnAddFiles: TButton;
-    BtnDeskew: TButton;
-    BtnClear: TButton;
-    BtnFinish: TButton;
+    BitBtn1: TBitBtn;
+    BtnAddFiles: TBitBtn;
+    BtnAdvOptions: TBitBtn;
+    BtnClear: TBitBtn;
+    BtnDeskew: TBitBtn;
     BtnBrowseOutputDir: TButton;
-    BtnAdvOptions: TButton;
     BtnAbout: TButton;
+    BtnFinish: TBitBtn;
     CheckAutoCrop: TCheckBox;
     CheckDefaultOutputFileOptions: TCheckBox;
     ColorBtnBackground: TColorButton;
@@ -86,17 +97,27 @@ implementation
 {$R *.lfm}
 
 uses
-  ImagingUtility, Imaging, DataModule, AdvOptionsForm, AboutForm, Config;
+  ImagingUtility, DataModule, AdvOptionsForm, AboutForm, Config, Utils;
 
 { TFormMain }
 
 procedure TFormMain.FormCreate(Sender: TObject);
 begin
+{$IF Defined(MSWINDOWS)}
+  Color := clWhite;
+  // Is there a dependable monospaced font for Linux?
+  // macOS has Courier New but changing the font from default messes up colors in dark mode.
+  MemoOutput.Font.Name := 'Courier New';
+{$ENDIF}
+
   FRunner := TRunner.Create(MemoOutput);
   FRunner.OnFinished := RunnerFinished;
   FRunner.OnProgress := RunnerProgress;
 
   Caption := Application.Title + ' v' + Module.VersionString;
+
+  MemoFiles.Clear;
+  MemoOutput.Clear;
 
   ComboFileFormat.Items.Clear;
   ComboFileFormat.Items.AddObject('Same as input', TObject(ffSameAsInput));
@@ -214,7 +235,6 @@ end;
 procedure TFormMain.ActDeskewExecute(Sender: TObject);
 begin
   GatherOptions(Module.Options);
-  FormAdvOptions.GatherOptions(Module.Options);
 
   ActFinish.Caption := 'Stop';
   MemoOutput.Clear;

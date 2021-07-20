@@ -1,3 +1,13 @@
+{
+  Deskew
+  by Marek Mauder
+  https://galfar.vevb.net/deskew
+  https://github.com/galfar/deskew
+  - - - - -
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+}
 unit Options;
 
 // Needed for int<>set casting for TypInfo.SetToString to compile
@@ -84,7 +94,16 @@ type
 implementation
 
 uses
-  ImagingUtility, ImagingTiff, Utils, TypInfo;
+  ImagingUtility, Utils, TypInfo;
+
+// From ImagingTiff.pas
+const
+  TiffCompressionOptionNone        = 0;
+  TiffCompressionOptionLzw         = 1;
+  TiffCompressionOptionPackbitsRle = 2;
+  TiffCompressionOptionDeflate     = 3;
+  TiffCompressionOptionJpeg        = 4;
+  TiffCompressionOptionGroup4      = 5;
 
 const
   DefaultBackgroundColor = $FFFFFFFF; // white

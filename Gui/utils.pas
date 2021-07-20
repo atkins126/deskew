@@ -1,3 +1,13 @@
+{
+  Deskew
+  by Marek Mauder
+  https://galfar.vevb.net/deskew
+  https://github.com/galfar/deskew
+  - - - - -
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+}
 unit Utils;
 
 interface
@@ -26,6 +36,12 @@ function DetermineConfigFolder: string;
 function ColorToString(Color: TColor32): string;
 function StringToColorDef(const Str: string; Default: TColor32): TColor32;
 function StrArrayJoin(const StringArray: array of string; const Separator: string): string;
+
+function Color32(A, R, G, B: Byte): TColor32Rec; inline;
+function GetRedValue(Color32: TColor32): Byte; inline;
+function GetGreenValue(Color32: TColor32): Byte; inline;
+function GetBlueValue(Color32: TColor32): Byte; inline;
+
 
 implementation
 
@@ -114,6 +130,29 @@ begin
     Result := Result + StringArray[I] + Separator;
 
   Delete(Result, Length(Result), 1);
+end;
+
+function Color32(A, R, G, B: Byte): TColor32Rec;
+begin
+  Result.A := A;
+  Result.R := R;
+  Result.G := G;
+  Result.B := B;
+end;
+
+function GetRedValue(Color32: TColor32): Byte;
+begin
+  Result := (Color32 shr 16) and $FF;
+end;
+
+function GetGreenValue(Color32: TColor32): Byte;
+begin
+  Result := (Color32 shr 8) and $FF;
+end;
+
+function GetBlueValue(Color32: TColor32): Byte;
+begin
+  Result := Color32 and $FF;
 end;
 
 class function TEnumUtils<T>.EnumToStr(const EnumValue: T): string;
