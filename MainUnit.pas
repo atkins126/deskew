@@ -34,14 +34,15 @@ uses
   RotationDetector;
 
 const
-  SAppTitle = 'Deskew 1.30 (2019-06-07)'
+  SAppTitle = 'Deskew 1.31 (2021-09-22)'
     {$IF Defined(CPUX64)} + ' x64'
     {$ELSEIF Defined(CPUX86)} + ' x86'
     {$ELSEIF Defined(CPUARM)} + ' ARM'
     {$IFEND}
     {$IFDEF DEBUG} + ' (DEBUG)'{$ENDIF}
     + ' by Marek Mauder';
-  SAppHome = 'http://galfar.vevb.net/deskew/';
+  SAppHome = 'https://galfar.vevb.net/deskew/' + sLineBreak +
+             'https://github.com/galfar/deskew';
 
 var
   // Program options
@@ -62,19 +63,21 @@ begin
   WriteLn('deskew [-o output] [-a angle] [-b color] [..] input');
   WriteLn('    input:         Input image file');
   WriteLn('  Options:');
-  WriteLn('    -o output:     Output image file (default: out.png)');
+  WriteLn('    -o output:     Output image file name (default: prefixed input as png)');
   WriteLn('    -a angle:      Maximal expected skew angle (both directions) in degrees (default: 10)');
   WriteLn('    -b color:      Background color in hex format RRGGBB|LL|AARRGGBB (default: black)');
   WriteLn('  Ext. options:');
-  WriteLn('    -q filter:     Resampling filter used for rotations (default: linear,');
+  WriteLn('    -q filter:     Resampling filter used for rotations (default: linear');
   WriteLn('                   values: nearest|linear|cubic|lanczos)');
-  WriteLn('    -t a|treshold: Auto threshold or value in 0..255 (default: a)');
-  WriteLn('    -r rect:       Skew detection only in content rectangle (pixels):');
-  WriteLn('                   left,top,right,bottom (default: whole page)');
+  WriteLn('    -t a|treshold: Auto threshold or value in 0..255 (default: auto)');
+  WriteLn('    -r rect:       Skew detection only in content rectangle:');
+  WriteLn('                   left,top,right,bottom[,unit] (default: whole page)');
+  WriteLn('                   unit: px|%|mm|cm|in');
   WriteLn('    -f format:     Force output pixel format (values: b1|g8|rgb24|rgba32)');
+  WriteLn('    -p dpi:        Print resolution override');
   WriteLn('    -l angle:      Skip deskewing step if skew angle is smaller (default: 0.01)');
   WriteLn('    -g flags:      Operational flags (any combination of):');
-  WriteLn('                   c - auto crop, d - detect only (no output to file)');
+  WriteLn('                   c - crop to input size, d - detect only (no output to file)');
   WriteLn('    -s info:       Info dump (any combination of):');
   WriteLn('                   s - skew detection stats, p - program parameters, t - timings');
   WriteLn('    -c specs:      Output compression specs for some file formats. Several specs');
@@ -101,8 +104,7 @@ end;
 
 procedure ReportBadInput(const Msg: string; ShowUsage: Boolean = True);
 begin
-  WriteLn;
-  WriteLn('Error: ' + Msg);
+  WriteLn('ERROR: ' + Msg);
   if Options.ErrorMessage <> '' then
     WriteLn(Options.ErrorMessage);
   WriteLn;
@@ -153,7 +155,7 @@ var
 begin
   Result := False;
   Threshold := 0;
-  WriteLn('Preparing input image (', ExtractFileName(Options.InputFile), ' [',
+  WriteLn('Preparing input image (', ExtractFileName(Options.InputFileName), ' [',
     InputImage.Width, 'x', InputImage.Height, '/', string(InputImage.FormatInfo.Name), ']) ...');
 
   // Clone input image and convert it to 8bit grayscale. This will be our
@@ -177,12 +179,21 @@ begin
       end;
   end;
 
-  // Determine the content rect - where exactly to detect rotated text
-  ContentRect := InputImage.BoundsRect;
-  if not IsRectEmpty(Options.ContentRect) then
+  if Options.DpiOverride > 0 then
   begin
-    if not IntersectRect(ContentRect, Options.ContentRect, InputImage.BoundsRect) then
-      ContentRect := InputImage.BoundsRect;
+    // If user DPI override is set we use it for both input and output.
+    GlobalMetadata.SetPhysicalPixelSize(ruDpi, Options.DpiOverride, Options.DpiOverride);
+  end;
+
+  // Determine the content rect - where exactly to detect rotated text
+  if not Options.CalcContentRectForImage(InputImage.BoundsRect, GlobalMetadata, ContentRect) then
+  begin
+    // User most probably defined content/margins with physical resolution units (cm, inch, ...)
+    // but the image has no physical resolution info inside or Deskew is not able to read it.
+    // We could use some default (e.g. 96 DPI) but let's rather fail here
+    // so the user clearly sees that the expected outcome is not possible.
+    raise Exception.Create('Could not determine content rectangle in pixels.' + sLineBreak +
+      'Image does not contain DPI information or Deskew failed to read it.');
   end;
 
   // Main step - calculate image rotation SkewAngle
@@ -245,7 +256,7 @@ begin
 
     Time := GetTimeMicroseconds;
     ImageUtils.RotateImage(OutputImage.ImageDataPointer^, SkewAngle, Options.BackgroundColor,
-      Options.ResamplingFilter, not (ofAutoCrop in Options.OperationalFlags));
+      Options.ResamplingFilter, not (ofCropToInput in Options.OperationalFlags));
     WriteTiming('Rotate image');
   end
   else
@@ -310,6 +321,7 @@ begin
 
   WriteLn(SAppTitle);
   WriteLn(SAppHome);
+  WriteLn;
 
   Options := TCmdLineOptions.Create;
   InputImage := TSingleImage.Create;
@@ -323,20 +335,25 @@ begin
         if Options.ShowParams then
           WriteLn(Options.OptionsToString);
 
-        if not IsFileFormatSupported(Options.InputFile) then
+        if not IsFileFormatSupported(Options.InputFileName) then
         begin
-          ReportBadInput('File format not supported: ' + Options.InputFile);
+          ReportBadInput('Input file format not supported: ' + Options.InputFileName);
+          Exit;
+        end;
+        if not IsFileFormatSupported(Options.OutputFileName) then
+        begin
+          ReportBadInput('Output file format not supported: ' + Options.OutputFileName);
           Exit;
         end;
 
         // Load input image
         Time := GetTimeMicroseconds;
-        InputImage.LoadFromFile(Options.InputFile);
+        InputImage.LoadFromFile(Options.InputFileName);
         WriteTiming('Load input file');
 
         if not InputImage.Valid then
         begin
-          ReportBadInput('Loaded input image is not valid: ' + Options.InputFile, False);
+          ReportBadInput('Loaded input image is not valid: ' + Options.InputFileName, False);
           Exit;
         end;
 
@@ -345,13 +362,13 @@ begin
 
         if not (ofDetectOnly in Options.OperationalFlags) then
         begin
-          WriteLn('Saving output (', ExpandFileName(Options.OutputFile), ' [',
+          WriteLn('Saving output (', ExpandFileName(Options.OutputFileName), ' [',
             OutputImage.Width, 'x', OutputImage.Height, '/', string(OutputImage.FormatInfo.Name), ']) ...');
 
           // Make sure output folders are ready
-          EnsureOutputLocation(Options.OutputFile);
+          EnsureOutputLocation(Options.OutputFileName);
           // In case no change to image was done by deskewing we still need to resave if requested file format differs from input
-          Changed := Changed or not SameText(GetFileExt(Options.InputFile), GetFileExt(Options.OutputFile));
+          Changed := Changed or not SameText(GetFileExt(Options.InputFileName), GetFileExt(Options.OutputFileName));
 
           Time := GetTimeMicroseconds;
           if Changed then
@@ -359,12 +376,12 @@ begin
             // Make sure recognized metadata stays (like scanning DPI info)
             GlobalMetadata.CopyLoadedMetaItemsForSaving;
             // Save the output
-            OutputImage.SaveToFile(Options.OutputFile);
+            OutputImage.SaveToFile(Options.OutputFileName);
           end
           else
           begin
             // No change to image made, just copy it to the desired destination
-            CopyFile(Options.InputFile, Options.OutputFile);
+            CopyFile(Options.InputFileName, Options.OutputFileName);
           end;
           WriteTiming('Save output file');
         end;

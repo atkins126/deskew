@@ -39,6 +39,7 @@ uses
 type
   { Default Imaging excepton class }
   EImagingError = class(Exception);
+
   { Raised when function receives bad image (not passed TestImage).}
   EImagingBadImage = class(Exception)
   public
@@ -577,7 +578,7 @@ type
     function GetMetaByIdx(Index: Integer): TMetadataItem;
     function GetSaveMetaById(const Id: string): Variant;
     function GetSaveMetaByIdMulti(const Id: string; ImageIndex: Integer): Variant;
-    procedure TranslateUnits(ResolutionUnit: TResolutionUnit; var XRes, YRes: Single);
+    procedure TranslateUnits(ResolutionUnit: TResolutionUnit; var XRes, YRes: Double);
   public
     constructor Create;
     destructor Destroy; override;
@@ -596,8 +597,8 @@ type
     procedure CopyLoadedMetaItemsForSaving;
 
     function GetPhysicalPixelSize(ResUnit: TResolutionUnit; var XSize,
-      YSize: Single; MetaForSave: Boolean = False; ImageIndex: Integer = 0): Boolean;
-    procedure SetPhysicalPixelSize(ResUnit: TResolutionUnit; XSize, YSize: Single;
+      YSize: Double; MetaForSave: Boolean = False; ImageIndex: Integer = 0): Boolean;
+    procedure SetPhysicalPixelSize(ResUnit: TResolutionUnit; XSize, YSize: Double;
       MetaForSave: Boolean = False; ImageIndex: Integer = 0);
 
     property MetaItems[const Id: string]: Variant read GetMetaById;
@@ -612,7 +613,7 @@ type
 const
   { Metadata item id constants }
 
-  { Physical size of one pixel in micrometers. Type of value is Float.}
+  { Physical size of one pixel in micrometers. Type of value is Double.}
   SMetaPhysicalPixelSizeX = 'PhysicalPixelSizeX';
   SMetaPhysicalPixelSizeY = 'PhysicalPixelSizeY';
   { Delay for frame of animation (how long it should stay visible) in milliseconds.
@@ -4067,7 +4068,7 @@ begin
 end;
 
 function TMetadata.GetPhysicalPixelSize(ResUnit: TResolutionUnit; var XSize,
-  YSize: Single; MetaForSave: Boolean; ImageIndex: Integer): Boolean;
+  YSize: Double; MetaForSave: Boolean; ImageIndex: Integer): Boolean;
 type
   TGetter = function(const Id: string; ImageIndex: Integer): Variant of object;
 var
@@ -4103,7 +4104,7 @@ begin
 end;
 
 procedure TMetadata.SetPhysicalPixelSize(ResUnit: TResolutionUnit; XSize,
-  YSize: Single; MetaForSave: Boolean; ImageIndex: Integer);
+  YSize: Double; MetaForSave: Boolean; ImageIndex: Integer);
 type
   TAdder = procedure(const Id: string; const Value: Variant; ImageIndex: Integer) of object;
 var
@@ -4121,9 +4122,9 @@ begin
 end;
 
 procedure TMetadata.TranslateUnits(ResolutionUnit: TResolutionUnit; var XRes,
-  YRes: Single);
+  YRes: Double);
 var
-  UnitSize: Single;
+  UnitSize: Double;
 begin
   case ResolutionUnit of
     ruDpi: UnitSize := 25400;
